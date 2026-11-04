@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alış-veriş Tətbiqi</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #f4f7f6;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .form-group {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #219150;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+
+        .receipt-summary {
+            background-color: #eef9f1;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .receipt-summary p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🛒 Alış-veriş Tətbiqi</h1>
+
+    <!-- Məhsul Əlavə Etmə Forması -->
+    <div class="form-group">
+        <input type="text" id="prodName" placeholder="Məhsul adı">
+        <input type="number" id="prodPrice" min="0" step="0.01" placeholder="Qiymət (AZN)">
+        <input type="number" id="prodQty" min="1" placeholder="Say">
+        <button onclick="addProduct()">Əlavə et</button>
+    </div>
+
+    <!-- Məhsul Axtarışı -->
+    <div class="search-box">
+        <input type="text" id="searchInput" onkeyup="searchProduct()" placeholder="🔍 Məhsul adı ilə axtar...">
+    </div>
+
+    <!-- Məhsul Cədvəli -->
+    <h2>Məhsul Siyahısı</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Adı</th>
+                <th>Qiyməti</th>
+                <th>Sayı</th>
+                <th>Cəmi</th>
+            </tr>
+        </thead>
+        <tbody id="productTable">
+            <!-- Məhsullar buraya əlavə olunacaq -->
+        </tbody>
+    </table>
+
+    <!-- Qəbz və Yekun Hissə -->
+    <div class="receipt-summary">
+        <h2>🧾 Qəbz</h2>
+        <p>İlkin cəm: <span id="rawTotal">0.00</span> AZN</p>
+        <p>Endirim: <span id="discountText">0% (-0.00 AZN)</span></p>
+        <p><strong>YEKUN MƏBLƏĞ: <span id="finalTotal">0.00</span> AZN</strong></p>
+        <p style="margin-top: 10px;">Ən baha məhsul: <span id="mostExpensive" class="highlight">-</span></p>
+    </div>
+</div>
+
+<script>
+    let products = [];
+
+    function addProduct() {
+        const nameInput = document.getElementById('prodName');
+        const priceInput = document.getElementById('prodPrice');
+        const qtyInput = document.getElementById('prodQty');
+
+        const name = nameInput.value.trim();
+        const price = parseFloat(priceInput.value);
+        const quantity = parseInt(qtyInput.value);
+
+        if (!name || isNaN(price) || price < 0 || isNaN(quantity) || quantity <= 0) {
+            alert("Lütfən bütün xanalari düzgün doldurun!");
+            return;
+        }
+
+        products.push({ name, price, quantity });
+
+        // Xanaları təmizlə
+        nameInput.value = '';
+        priceInput.value = '';
+        qtyInput.value = '';
+
+        renderTable();
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('productTable');
+        tbody.innerHTML = '';
+
+        let rawTotal = 0;
+        let mostExpensive = null;
+
+        products.forEach(p => {
+            const subtotal = p.price * p.quantity;
+            rawTotal += subtotal;
+
+            if (!mostExpensive || p.price > mostExpensive.price) {
+                mostExpensive = p;
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.name}</td>
+                <td>${p.price.toFixed(2)} AZN</td>
+                <td>${p.quantity}</td>
+                <td>${subtotal.toFixed(2)} AZN</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Endirim hesablanması
+        let discountPct = 0;
+        if (rawTotal > 1000) {
+            discountPct = 0.10;
+        } else if (rawTotal > 500) {
+            discountPct = 0.05;
+        }
+
+        const discountAmt = rawTotal * discountPct;
+        const finalTotal = rawTotal - discountAmt;
+
+        // Ekrana çıxarmaq
+        document.getElementById('rawTotal').innerText = rawTotal.toFixed(2);
+        document.getElementById('discountText').innerText = `${discountPct * 100}% (-${discountAmt.toFixed(2)} AZN)`;
+        document.getElementById('finalTotal').innerText = finalTotal.toFixed(2);
+
+        if (mostExpensive) {
+            document.getElementById('mostExpensive').innerText = `${mostExpensive.name} (${mostExpensive.price.toFixed(2)} AZN)`;
+        } else {
+            document.getElementById('mostExpensive').innerText = '-';
+        }
+    }
+
+    function searchProduct() {
+        const filter = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#productTable tr');
+
+        rows.forEach(row => {
+            const nameCell = row.cells[0];
+            if (nameCell) {
+                const text = nameCell.innerText.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
